@@ -100,8 +100,68 @@ typedef struct VECTOR3D_TYP
 	};
 }VECTOR3D, POINT3D, *VECTOR3D_PTR, *POINT3D_PTR;
 
+// 4D homogenous vector, point with w
+typedef struct VECTOR4D_TYP
+{
+	union 
+	{
+		float M[4];	// array indexed stroage
 
+		// explicit names
+		struct
+		{
+			float x, y, z, w;
+		};
+	};
+}VECTOR4D, POINT4D, *VECTOR4D_PTR, *POINT4D_PTR;
 
+// 2D parametric line
+typedef struct PARMLINE2D_TYP
+{
+	POINT2D p0;	// start point of parametric line
+	POINT2D	p1;	// end point of parametric line
+	VECTOR2D v;	// direction vector of line segment
+				// |v| = |p0->p1|
+}PARMLINE2D, *PARMLINE2D_PTR;
+
+// 3D parametric line
+typedef struct PARMLINE3D_TYP
+{
+	POINT3D p0;	// start point of parametric line
+	POINT3D p1; // end point of parametric line
+	VECTOR3D v;	// direction vector of line segment;
+				// |v| = |p0->p1|
+}PARMLINE3D, *PARMLINE3D_PTR; 
+
+// 3D plane
+typedef struct PLANE3D_TYP
+{
+	POINT3D p0;	// point on the plane
+	VECTOR3D n;	// normal to the plane (not necessarily a unit vector)
+}PLANE3D, *PLANE3D_PTR;
+
+// 2D polar coordinates
+typedef struct POLAR2D_TYP
+{
+	float r;	// the radi of the point
+	float theta;	// the angle in rads
+}POLAR2D, *POLAR2D_PTR;
+
+// 3D cylindrical coordinates
+typedef struct CYLINDIRCAL3D_TYP
+{
+	float r;	// the radi of the point
+	float theta;	// the angle in degrees about the z axis
+	float z;	// the z-height of the point
+}CYLINDIRCAL3D, *CYLINDRICAL3D_PTR;
+
+// 3D spherical coordinatates
+typedef struct SPHERICAL3D_TYP
+{
+	float p;		// rho, the distance to the point from the origin
+	float theta;	// the angle from the z-axis and the line segment o->p
+	float phi;		// he angle from the projection if o->p onto the x-y plane and the x-axis
+}SPHERICAL3D, *SPHERICAL3D_PTR;
 
 class t3dlib4
 {
