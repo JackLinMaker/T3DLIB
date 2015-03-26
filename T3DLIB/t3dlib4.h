@@ -163,6 +163,15 @@ typedef struct SPHERICAL3D_TYP
 	float phi;		// he angle from the projection if o->p onto the x-y plane and the x-axis
 }SPHERICAL3D, *SPHERICAL3D_PTR;
 
+// 4d quaternion
+// noted  the union gives us a number of ways to work with
+// the components of the quaterinon
+
+typedef struct QUAD_TYP
+{
+
+}QUAT, *QUAT_PTR;
+
 class t3dlib4
 {
 public:
