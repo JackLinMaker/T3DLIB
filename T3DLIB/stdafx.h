@@ -6,16 +6,31 @@
 #pragma once
 
 #include "targetver.h"
+#define WIN32_LEAN_AND_MEAN  
 
-#define WIN32_LEAN_AND_MEAN             //  从 Windows 头文件中排除极少使用的信息
-// Windows 头文件:
-#include <windows.h>
+//#ifndef INITGUID
+//#define INITGUID       // you need this or DXGUID.LIB
+//#endif
 
-// C 运行时头文件
+#include <windows.h>   // include important windows stuff
+#include <windowsx.h> 
+#include <mmsystem.h>
+#include <objbase.h>
+#include <iostream> // include important C/C++ stuff
+#include <conio.h>
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
-#include <tchar.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <math.h>
+#include <io.h>
+#include <fcntl.h>
+#include <direct.h>
+#include <wchar.h>
+
+#include <ddraw.h>      // needed for defs in T3DLIB1.H 
 
 
 // TODO: 在此处引用程序需要的其他头文件

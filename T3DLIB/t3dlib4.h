@@ -167,10 +167,280 @@ typedef struct SPHERICAL3D_TYP
 // noted  the union gives us a number of ways to work with
 // the components of the quaterinon
 
-typedef struct QUAD_TYP
+typedef struct QUAT_TYP
 {
+	union
+	{
+		float M[4];	// array indexed storage w,x,y,z order
 
+		// vector part, real part format
+		struct
+		{
+			float q0;	// the real part
+			VECTOR3D qv;	// the imaginary part xi + yj + zk
+		};
+		struct
+		{
+			float w, x, y, z;
+		};
+	};
 }QUAT, *QUAT_PTR;
+
+// fixed point types
+typedef int FIXP16;
+typedef int *FIXP16_PTR;
+
+///////////////////////////////////////////////////////////////
+
+// FORWARD REF DEFINES & CONSTANTS ////////////////////////////
+
+// identity matrices
+
+// 4x4 identity matrix
+const MATRIX4X4 IMAT_4X4 = {1,0,0,0, 
+                            0,1,0,0, 
+                            0,0,1,0, 
+                            0,0,0,1};
+
+// 4x3 identity matrix (note this is not correct mathematically)
+// but later we may use 4x3 matrices with the assumption that 
+// the last column is always [0 0 0 1]t
+const MATRIX4X3 IMAT_4X3 = {1,0,0, 
+                            0,1,0, 
+                            0,0,1, 
+                            0,0,0,};
+
+
+// 3x3 identity matrix
+const MATRIX3X3 IMAT_3X3 = {1,0,0, 
+                            0,1,0, 
+                            0,0,1};
+
+// 2x2 identity matrix
+const MATRIX2X2 IMAT_2X2 = {1,0, 
+                            0,1};
+
+// MACROS, SMALL INLINE FUNCS /////////////////////////////////
+
+// matrix macros
+
+// macros to clear out matrices
+#define MAT_ZERO_2X2(m) {memset((void *)(m), 0, sizeof(MATRIX2X2));}
+#define MAT_ZERO_3X3(m) {memset((void *)(m), 0, sizeof(MATRIX3X3));}
+#define MAT_ZERO_4X4(m) {memset((void *)(m), 0, sizeof(MATRIX4X4));}
+#define MAT_ZERO_4X3(m) {memset((void *)(m), 0, sizeof(MATRIX4X3));}
+
+// macros to set the identity matrix
+#define MAT_IDENTITY_2X2(m) {memcpy((void *)(m), (void *)&IMAT_2X2, sizeof(MATRIX2X2));}
+#define MAT_IDENTITY_3X3(m) {memcpy((void *)(m), (void *)&IMAT_3X3, sizeof(MATRIX3X3));}
+#define MAT_IDENTITY_4X4(m) {memcpy((void *)(m), (void *)&IMAT_4X4, sizeof(MATRIX4X4));}
+#define MAT_IDENTITY_4X3(m) {memcpy((void *)(m), (void *)&IMAT_4X3, sizeof(MATRIX4X3));}
+
+// matrix copying macros
+#define MAT_COPY_2X2(src_mat, dest_mat) {memcpy((void *)(dest_mat), (void *)(src_mat), sizeof(MATRIX2X2) ); }
+#define MAT_COPY_3X3(src_mat, dest_mat) {memcpy((void *)(dest_mat), (void *)(src_mat), sizeof(MATRIX3X3) ); }
+#define MAT_COPY_4X4(src_mat, dest_mat) {memcpy((void *)(dest_mat), (void *)(src_mat), sizeof(MATRIX4X4) ); }
+#define MAT_COPY_4X3(src_mat, dest_mat) {memcpy((void *)(dest_mat), (void *)(src_mat), sizeof(MATRIX4X3) ); }
+
+// matrix transposing marcos
+inline void MAT_TRANSPOSE_3X3(MATRIX3X3_PTR m)
+{
+	MATRIX3X3 mt;
+	mt.M00 = m->M00; mt.M01 = m->M10; mt.M02 = m->M20;
+	mt.M10 = m->M01; mt.M11 = m->M11; mt.M12 = m->M21;
+	mt.M20 = m->M02; mt.M21 = m->M12; mt.M22 = m->M22;
+	memcpy((void *)m, (void *)&mt, sizeof(MATRIX3X3));
+}
+
+inline void MAT_TRANSPOSE_4X4(MATRIX4X4_PTR m)
+{
+	MATRIX4X4 mt;
+	mt.M00 = m->M00; mt.M01 = m->M10; mt.M02 = m->M20; mt.M03 = m->M30;
+	mt.M10 = m->M01; mt.M11 = m->M11; mt.M12 = m->M21; mt.M13 = m->M31;
+	mt.M20 = m->M02; mt.M21 = m->M12; mt.M22 = m->M22; mt.M23 = m->M32;
+	mt.M30 = m->M03; mt.M31 = m->M13; mt.M32 = m->M23; mt.M33 = m->M33;
+	memcpy((void *)m, (void *)&mt, sizeof(MATRIX4X4));
+}
+
+inline void MAT_TRANSPOSE_3X3(MATRIX3X3_PTR m, MATRIX3X3_PTR mt) 
+{ mt->M00 = m->M00; mt->M01 = m->M10; mt->M02 = m->M20;
+  mt->M10 = m->M01; mt->M11 = m->M11; mt->M12 = m->M21;
+  mt->M20 = m->M02; mt->M21 = m->M12; mt->M22 = m->M22; }
+
+inline void MAT_TRANSPOSE_4X4(MATRIX4X4_PTR m, MATRIX4X4_PTR mt) 
+{ mt->M00 = m->M00; mt->M01 = m->M10; mt->M02 = m->M20; mt->M03 = m->M30; 
+  mt->M10 = m->M01; mt->M11 = m->M11; mt->M12 = m->M21; mt->M13 = m->M31; 
+  mt->M20 = m->M02; mt->M21 = m->M12; mt->M22 = m->M22; mt->M23 = m->M32; 
+  mt->M30 = m->M03; mt->M31 = m->M13; mt->M32 = m->M22; mt->M33 = m->M33; }
+
+// matrix and vector column swaping marcos
+inline void MAT_COLUMN_SWAP_2X2(MATRIX2X2_PTR m, int c, MATRIX1X2_PTR v)
+{
+	m->M[0][c] = v->M[0];
+	m->M[1][c] = v->M[1];
+}
+
+inline void MAT_COLUMN_SWAP_3X3(MATRIX3X3_PTR m, int c, MATRIX1X3_PTR v) 
+{ m->M[0][c]=v->M[0]; m->M[1][c]=v->M[1]; m->M[2][c]=v->M[2]; } 
+
+inline void MAT_COLUMN_SWAP_4X4(MATRIX4X4_PTR m, int c, MATRIX1X4_PTR v) 
+{m->M[0][c]=v->M[0]; m->M[1][c]=v->M[1]; m->M[2][c]=v->M[2]; m->M[3][c]=v->M[3]; } 
+
+inline void MAT_COLUMN_SWAP_4X3(MATRIX4X3_PTR m, int c, MATRIX1X4_PTR v) 
+{m->M[0][c]=v->M[0]; m->M[1][c]=v->M[1]; m->M[2][c]=v->M[2]; m->M[3][c]=v->M[3]; } 
+
+// vector macros, note the 4D vector sets w=1
+// vector zeroing macros
+inline void VECTOR2D_ZERO(VECTOR2D_PTR v) 
+{(v)->x = (v)->y = 0.0;}
+
+inline void VECTOR3D_ZERO(VECTOR3D_PTR v) 
+{(v)->x = (v)->y = (v)->z = 0.0;}
+
+inline void VECTOR4D_ZERO(VECTOR4D_PTR v) 
+{(v)->x = (v)->y = (v)->z = 0.0; (v)->w = 1.0;}
+
+
+// macros to initialize vectors with explicit components
+inline void VECTOR2D_INITXY(VECTOR2D_PTR v, float x, float y) 
+{(v)->x = (x); (v)->y = (y);}
+
+inline void VECTOR3D_INITXYZ(VECTOR3D_PTR v, float x, float y, float z) 
+{(v)->x = (x); (v)->y = (y); (v)->z = (z);}
+
+inline void VECTOR4D_INITXYZ(VECTOR4D_PTR v, float x,float y,float z) 
+{(v)->x = (x); (v)->y = (y); (v)->z = (z); (v)->w = 1.0;}
+
+// used to convert from 4D homogenous to 4D non-homogenous
+inline void VECTOR4D_DIV_BY_W(VECTOR4D_PTR v) 
+{(v)->x/=(v)->w; (v)->y/=(v)->w; (v)->z/=(v)->w;  }
+
+inline void VECTOR4D_DIV_BY_W_VECTOR3D(VECTOR4D_PTR v4, VECTOR3D_PTR v3) 
+{(v3)->x = (v4)->x/(v4)->w; (v3)->y = (v4)->y/(v4)->w; (v3)->z = (v4)->z/(v4)->w;  }
+
+
+// vector intialization macros to initialize with other vectors
+inline void VECTOR2D_INIT(VECTOR2D_PTR vdst, VECTOR2D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  }
+
+inline void VECTOR3D_INIT(VECTOR3D_PTR vdst, VECTOR3D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  (vdst)->z = (vsrc)->z; }
+
+inline void VECTOR4D_INIT(VECTOR4D_PTR vdst, VECTOR4D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  
+(vdst)->z = (vsrc)->z; (vdst)->w = (vsrc)->w;  }
+
+// vector copying macros
+inline void VECTOR2D_COPY(VECTOR2D_PTR vdst, VECTOR2D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  }
+
+
+inline void VECTOR3D_COPY(VECTOR3D_PTR vdst, VECTOR3D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  (vdst)->z = (vsrc)->z; }
+
+inline void VECTOR4D_COPY(VECTOR4D_PTR vdst, VECTOR4D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  
+(vdst)->z = (vsrc)->z; (vdst)->w = (vsrc)->w;  }
+
+// point initialization macros
+inline void POINT2D_INIT(POINT2D_PTR vdst, POINT2D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  }
+
+inline void POINT3D_INIT(POINT3D_PTR vdst, POINT3D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  (vdst)->z = (vsrc)->z; }
+
+inline void POINT4D_INIT(POINT4D_PTR vdst, POINT4D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  
+(vdst)->z = (vsrc)->z; (vdst)->w = (vsrc)->w;  }
+
+// point copying macros
+inline void POINT2D_COPY(POINT2D_PTR vdst, POINT2D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  }
+
+inline void POINT3D_COPY(POINT3D_PTR vdst, POINT3D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  (vdst)->z = (vsrc)->z; }
+
+inline void POINT4D_COPY(POINT4D_PTR vdst, POINT4D_PTR vsrc) 
+{(vdst)->x = (vsrc)->x; (vdst)->y = (vsrc)->y;  
+(vdst)->z = (vsrc)->z; (vdst)->w = (vsrc)->w;  }
+
+
+// quaternion marcos
+inline void QUAT_ZERO(QUAT_PTR q)
+{
+	(q)->x = (q)->y = (q)->z = (q)->w = 0.0;
+}
+
+inline void QUAT_INITWXYZ(QUAT_PTR q, float w, float x,float y,float z) 
+{ (q)->w = (w); (q)->x = (x); (q)->y = (y); (q)->z = (z); }
+
+inline void QUAT_INIT_VECTOR3D(QUAT_PTR q, VECTOR3D_PTR v) 
+{ (q)->w = 0; (q)->x = (v->x); (q)->y = (v->y); (q)->z = (v->z); }
+
+
+
+inline void QUAT_INIT(QUAT_PTR qdst, QUAT_PTR qsrc) 
+{(qdst)->w = (qsrc)->w;  (qdst)->x = (qsrc)->x;  
+ (qdst)->y = (qsrc)->y;  (qdst)->z = (qsrc)->z;  }
+
+
+inline void QUAT_COPY(QUAT_PTR qdst, QUAT_PTR qsrc) 
+{(qdst)->x = (qsrc)->x; (qdst)->y = (qsrc)->y;  
+(qdst)->z = (qsrc)->z; (qdst)->w = (qsrc)->w;  }
+
+
+// convert integer and float to fixed point 16.16
+#define INT_TO_FIXP16(i) ((i) <<  FIXP16_SHIFT)
+#define FLOAT_TO_FIXP16(f) (((float)(f) * (float)FIXP16_MAG+0.5))
+
+// convert fixed point to float
+#define FIXP16_TO_FLOAT(fp) ( ((float)fp)/FIXP16_MAG)
+
+// extract the whole part and decimal part from a fixed point 16.16
+#define FIXP16_WP(fp) ((fp) >> FIXP16_SHIFT)
+#define FIXP16_DP(fp) ((fp) && FIXP16_DP_MASK)
+
+// trig functions
+float Fast_Sin(float theta);
+float Fast_Cos(float theta);
+
+// polar cylindrical, spherical functions
+void POLAR2D_To_POINT2D(POLAR2D_PTR polar, POINT2D_PTR rect);
+void POLAR2D_To_RectXY(POLAR2D_PTR polar, float *x, float *y);
+void POINT2D_To_POLAR2D(POINT2D_PTR rect, POLAR2D_PTR polar);
+void POINT2D_To_PolarRTH(POINT2D_PTR rect, float *r, float *theta);
+void CYLINDIRCAL3D_To_POINT2D(CYLINDRICAL3D_PTR cy1, POINT3D_PTR rect);
+void CYLINDIRCAL3D_To_RectXYZ(CYLINDRICAL3D_PTR cy1, float *x, float *y, float *z);
+void POINT3D_To_CYLINDRICAL3D(POINT3D_PTR rect, CYLINDRICAL3D_PTR cyl);
+void POINT3D_To_CylindricalRThZ(POINT3D_PTR rect, float *r, float *theta, float *z);
+void SPHERICAL3D_To_POINT3D(SPHERICAL3D_PTR sph, POINT3D_PTR rect);
+void SPHERICAL3D_To_RectXYZ(SPHERICAL3D_PTR sph, float *x, float *y, float *z);
+void POINT3D_To_SPHERICAL3D(POINT3D_PTR rect, SPHERICAL3D_PTR sph);
+void POINT3D_To_SphericalPThPh(POINT3D_PTR rect, float *p, float *theta, float *phi);
+
+// 2d vector functions
+void VECTOR2D_Add(VECTOR2D_PTR va, VECTOR2D_PTR vb, VECTOR2D_PTR vsum);
+VECTOR2D VECTOR2D_Add(VECTOR2D_PTR va, VECTOR2D_PTR vb);
+void VECTOR2D_Sub(VECTOR2D_PTR va, VECTOR2D_PTR vb, VECTOR2D_PTR vdiff);
+VECTOR2D VECTOR2D_Sub(VECTOR2D_PTR va, VECTOR2D_PTR vb);
+void VECTOR2D_Scale(float k, VECTOR2D_PTR va);
+void VECTOR2D_Scale(float k, VECTOR2D_PTR va, VECTOR2D_PTR vscaled);
+float VECTOR2D_Dot(VECTOR2D_PTR va, VECTOR2D_PTR vb);
+float VECTOR2D_Length(VECTOR2D_PTR va);
+float VECTOR2D_Length_Fast(VECTOR2D_PTR va);
+void VECTOR2D_Normalize(VECTOR2D_PTR va);
+void VECTOR2D_Normalize(VECTOR2D_PTR va, VECTOR2D_PTR vn);
+void VECTOR2D_Build(VECTOR2D_PTR init, VECTOR2D_PTR term, VECTOR2D_PTR result);
+float VECTOR2D_CosTh(VECTOR2D_PTR va, VECTOR2D_PTR vb);
+void VECTOR2D_Print(VECTOR2D_PTR va, char *name);
+
+
+
+
+// 3d vector functions
+
+// 4d vector functions
+
 
 class t3dlib4
 {

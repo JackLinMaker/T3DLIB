@@ -142,15 +142,111 @@ typedef struct BOB_TYP
 	int state; 
 }BOB, *BOB_PTR;
 
+// a 2d vertex
+typedef struct VERTEX2DI_TYP
+{
+	int x,y;	// the vertex
+}VERTEX2DI, *VERTEX2DI_PTR;
+
+// a 2D vertex
+typedef struct VERTEX2DF_TYP
+{
+	float x, y;	// the vertex
+}VERTEX2DF, *VERTEX2DF_PTR;
+
+// a 2D polygon
+typedef struct POLYGON2D_TYP
+{
+	int state;	// state of poygon
+	int num_verts;	// number of vertices
+	int x0, y0;	// poisiton of center of polygon
+	int xv, yv;	// initial velocity
+	DWORD color;	// could be index of PALETTENTRY
+	VERTEX2DF *vlist;	// pointer to vertex list
+}POLYGON2D, *POLYGON2D_PTR;
 
 
+// matrix defines
+
+// 3x3 matrix /////////////////////////////////////////////
+typedef struct MATRIX3X3_TYP
+{
+union
+{
+float M[3][3]; // array indexed data storage
+
+// storage in row major form with explicit names
+struct
+        {
+        float M00, M01, M02;
+        float M10, M11, M12;
+        float M20, M21, M22;
+        }; // end explicit names
+
+}; // end union
+} MATRIX3X3, *MATRIX3X3_PTR;
 
 
+// 1x3 matrix /////////////////////////////////////////////
+typedef struct MATRIX1X3_TYP
+        {
+        union
+        {
+        float M[3]; // array indexed data storage
+
+        // storage in row major form with explicit names
+        struct
+             {
+             float M00, M01, M02;
+
+             }; // end explicit names
+        }; // end union
+        } MATRIX1X3, *MATRIX1X3_PTR;
+
+// 3x2 matrix /////////////////////////////////////////////
+typedef struct MATRIX3X2_TYP
+        {
+        union
+        {
+        float M[3][2]; // array indexed data storage
+
+        // storage in row major form with explicit names
+        struct
+             {
+             float M00, M01;
+             float M10, M11;
+             float M20, M21;
+             }; // end explicit names
+
+        }; // end union
+        } MATRIX3X2, *MATRIX3X2_PTR;
+
+// 1x2 matrix /////////////////////////////////////////////
+typedef struct MATRIX1X2_TYP
+        {
+        union
+        {
+        float M[2]; // array indexed data storage
+
+        // storage in row major form with explicit names
+        struct
+             {
+             float M00, M01;
+
+             }; // end explicit names
+        }; // end union
+        } MATRIX1X2, *MATRIX1X2_PTR;
+
+// storage for our lookup tables
+extern float cos_look[361]; // 1 extra so we can store 0-360 inclusive
+extern float sin_look[361]; // 1 extra so we can store 0-360 inclusive
 
 
+void Build_Sin_Cos_Tables(void);
 
-
-
+// math functions
+int Fast_Distance_2D(int x, int y);
+float Fast_Distance_3D(float x, float y, float z);
 
 
 
